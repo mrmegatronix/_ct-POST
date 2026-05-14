@@ -21,6 +21,8 @@ export const COLORS = {
 };
 
 export const COLOR_PALETTES = [
+  { name: "Printer Friendly (White)", bg: "#FFFFFF", text: "#000000", accent: COLORS.gold },
+  { name: "Printer Friendly (Light Gray)", bg: "#F4F4F5", text: "#18181B", accent: COLORS.gold },
   { name: "Official Black & Gold", bg: COLORS.black, text: COLORS.white, accent: COLORS.gold },
   { name: "Midnight Social", bg: COLORS.midnight, text: COLORS.cream, accent: COLORS.gold },
   { name: "Sunday Roast", bg: "#1A1512", text: COLORS.cream, accent: COLORS.gold }, // Based on your sample
@@ -45,11 +47,11 @@ export type PosterSize = {
 
 export const POSTER_SIZES: PosterSize[] = [
   { name: "A4", width: 595, height: 842, label: "A4 (4cm Gutter)" },
-  { name: "Poster", width: 600, height: 900, label: "Standard Poster" },
+  { name: "A3 Poster", width: 600, height: 900, label: "A3 Poster (2cm Gutter)" },
   { name: "Social", width: 800, height: 800, label: "Social Media (1:1)" },
 ];
 
-export type PosterTheme = "tavern" | "social_club";
+export type PosterTheme = "tavern" | "social_club" | "both";
 
 export interface PosterData {
   id: string;
@@ -64,36 +66,88 @@ export interface PosterData {
   accentColor: string;
   qrUrl: string;
   qrColor: string;
-  qrPosition: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  qrPosition: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center';
+  qrShape?: 'square' | 'rounded' | 'circle';
+  qrLogo?: boolean;
   eventDate?: string;
   eventTime?: string;
   logoType: "default" | "minimal";
-  size: string;
+  showLogo: boolean;
+  size: "A4" | "A3 Poster" | "Social" | string;
   image?: string;
   imageScale: number;
   imageOffset: { x: number; y: number };
+  foregroundImage?: string;
+  foregroundScale?: number;
+  foregroundOffset?: { x: number; y: number };
+  solidBackgroundHeight?: number;
   contentScale: number;
+  contentVerticalPosition?: number;
   overlayOpacity: number;
+  referenceImage?: string;
+  referenceOpacity?: number;
+  titleAlign?: 'left' | 'center' | 'right';
+  subtitleAlign?: 'left' | 'center' | 'right';
+  detailsAlign?: 'left' | 'center' | 'right';
+  footerAlign?: 'left' | 'center' | 'right';
+  titleColor?: string;
+  subtitleColor?: string;
+  detailsColor?: string;
+  footerColor?: string;
+  logoColor?: string;
+  logoAccent?: string;
+  marginTop?: number;
+  marginBottom?: number;
+  marginLeft?: number;
+  marginRight?: number;
 }
+
+export const LAYOUT_SAMPLES = [
+  { name: "Burger Night", path: "/samples/2025-CT-BURGER-NIGHT-THURSDAYS-595x842.jpg" },
+  { name: "Happy Hours", path: "/samples/2025-CT-HAPPY-HOURS-THUR-and-FRI-595x842.jpg" },
+  { name: "Rump Steak", path: "/samples/2025-CT-RUMP-STEAK-595x842.jpg" },
+  { name: "Fundraiser Quiz", path: "/samples/CAR-FundraiserQuiz-WebPoster.png" },
+  { name: "Chase The Ace", path: "/samples/CT-ChaseTheAce-WebPoster.png" },
+  { name: "Sunday Special", path: "/samples/CT-SundaySpecial-DIGI-Web-595x842.png" },
+  { name: "Wings Trivia", path: "/samples/CT-WingsTrivia_WebPoster-595x842.jpg" },
+  { name: "Web Template", path: "/samples/Wordpress-Web-Image-24.png" }
+];
 
 export const INITIAL_POSTER: PosterData = {
   id: "initial",
   title: "Sunday Roast",
   subtitle: "2 COURSE $30 | 3 COURSE $35",
   details: "Book a spot now\ncoasterstavern.co.nz",
+  footer: "coasterstavern.co.nz",
   theme: "tavern",
-  backgroundColor: COLORS.crimson,
-  textColor: COLORS.white,
+  backgroundColor: "#FFFFFF",
+  textColor: "#000000",
   accentColor: COLORS.gold,
   qrUrl: "https://coasterstavern.co.nz",
   qrColor: COLORS.black,
   qrPosition: 'bottom-right',
+  qrShape: 'rounded',
+  qrLogo: true,
   eventDate: "Every Thursday",
   eventTime: "From 7:00 PM",
   logoType: "default",
-  size: "Poster",
+  showLogo: true,
+  size: "A3 Poster",
   imageScale: 1,
   imageOffset: { x: 0, y: 0 },
+  foregroundScale: 1,
+  foregroundOffset: { x: 0, y: 0 },
   contentScale: 1,
+  solidBackgroundHeight: 50,
+  contentVerticalPosition: 50,
   overlayOpacity: 0.2,
+  referenceOpacity: 0.5,
+  titleAlign: 'center',
+  subtitleAlign: 'center',
+  detailsAlign: 'center',
+  footerAlign: 'center',
+  marginTop: 0,
+  marginBottom: 0,
+  marginLeft: 0,
+  marginRight: 0,
 };

@@ -19,20 +19,25 @@ import {
   ChevronRight,
   Send,
   X,
-  Eye
+  Eye,
+  LayoutTemplate,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  MoveVertical
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toPng, toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import confetti from 'canvas-confetti';
-import { COLORS, POSTER_SIZES, INITIAL_POSTER, PosterData, COLOR_PALETTES } from './constants';
+import { COLORS, POSTER_SIZES, INITIAL_POSTER, PosterData, COLOR_PALETTES, LAYOUT_SAMPLES } from './constants';
 import { CoastersLogo } from './components/CoastersLogo';
 
 export default function App() {
   const [poster, setPoster] = useState<PosterData>(INITIAL_POSTER);
   const [gallery, setGallery] = useState<PosterData[]>([]);
-  const [activeTab, setActiveTab] = useState<'branding' | 'content' | 'visuals' | 'gallery'>('branding');
+  const [activeTab, setActiveTab] = useState<'layout' | 'branding' | 'content' | 'visuals' | 'gallery'>('layout');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
@@ -48,6 +53,7 @@ export default function App() {
   }, []);
   const posterRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const foregroundFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('coasters-gallery');
@@ -125,8 +131,13 @@ export default function App() {
   };
 
   const currentSize = POSTER_SIZES.find(s => s.name === poster.size) || POSTER_SIZES[1];
-  const isA4 = poster.size === 'A4';
-  const gutterSize = isA4 ? 113 : 0; // 4cm at 210mm wide scaled to 595px
+  const gutterSize = poster.size === 'A4' ? 113 : poster.size === 'A3 Poster' ? 56 : 0; // 4cm for A4, 2cm for A3
+
+  // Calculate base scale to shrink content onto smaller layouts or layouts with huge margins
+  const baseContentScale = Math.min(
+    (currentSize.width - gutterSize * 2) / 600,
+    (currentSize.height - gutterSize * 2) / 900
+  );
 
   // Calculate dynamic scale to fit viewport
   const availableWidth = viewportSize.width - (sidebarOpen ? 450 : 100);
@@ -150,6 +161,7 @@ export default function App() {
           </div>
         </div>
         
+        <NavButton active={activeTab === 'layout'} onClick={() => setActiveTab('layout')} icon={<LayoutTemplate />} label="Page" />
         <NavButton active={activeTab === 'branding'} onClick={() => setActiveTab('branding')} icon={<Grid />} label="Branding" />
         <NavButton active={activeTab === 'content'} onClick={() => setActiveTab('content')} icon={<Settings />} label="Content" />
         <NavButton active={activeTab === 'visuals'} onClick={() => setActiveTab('visuals')} icon={<Palette />} label="Visuals" />
@@ -185,6 +197,125 @@ export default function App() {
               </header>
 
               <AnimatePresence mode="wait">
+                {activeTab === 'layout' && (
+                  <motion.div key="layout" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Page Scale</label>
+                      <div className="grid grid-cols-1 gap-2">
+                        {POSTER_SIZES.map(s => (
+                          <button 
+                            key={s.name}
+                            onClick={() => setPoster({
+                              ...poster, 
+                              size: s.name,
+                              qrPosition: s.name === 'A4' ? 'center' : (s.name === 'A3 Poster' ? 'bottom-right' : poster.qrPosition)
+                            })}
+                            className={`p-3 text-left text-xs rounded-lg border transition-all ${poster.size === s.name ? 'bg-zinc-800 border-zinc-600' : 'bg-transparent border-zinc-800 opacity-60 hover:opacity-100'}`}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                      {poster.size === 'A4' && <p className="text-[9px] text-gold/60 uppercase font-bold mt-1 tracking-wider">Note: 4cm gutter active for standard A4</p>}
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 flex items-center justify-between">
+                        <span>Margins (cm)</span>
+                      </label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[9px] text-zinc-500 mb-1 block">Top</label>
+                          <input type="number" step="0.1" value={poster.marginTop || 0} onChange={e => setPoster({...poster, marginTop: Number(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 p-2 rounded text-xs outline-none focus:border-gold" />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-zinc-500 mb-1 block">Bottom</label>
+                          <input type="number" step="0.1" value={poster.marginBottom || 0} onChange={e => setPoster({...poster, marginBottom: Number(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 p-2 rounded text-xs outline-none focus:border-gold" />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-zinc-500 mb-1 block">Left</label>
+                          <input type="number" step="0.1" value={poster.marginLeft || 0} onChange={e => setPoster({...poster, marginLeft: Number(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 p-2 rounded text-xs outline-none focus:border-gold" />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-zinc-500 mb-1 block">Right</label>
+                          <input type="number" step="0.1" value={poster.marginRight || 0} onChange={e => setPoster({...poster, marginRight: Number(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 p-2 rounded text-xs outline-none focus:border-gold" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <button 
+                        onClick={() => {
+                          const wrapper = document.getElementById('poster-content-wrapper');
+                          if (!wrapper) return;
+                          
+                          const availableH = currentSize.height - (gutterSize * 2) - ((poster.marginTop || 0) + (poster.marginBottom || 0)) * 28.346;
+                          const availableW = currentSize.width - (gutterSize * 2) - ((poster.marginLeft || 0) + (poster.marginRight || 0)) * 28.346;
+                          
+                          // Temporarily remove transform to measure true scroll sizes
+                          const oldTransform = wrapper.style.transform;
+                          wrapper.style.transform = 'none';
+                          
+                          // Force layout recalc
+                          void wrapper.offsetHeight;
+                          
+                          const wrapperScrollH = wrapper.scrollHeight;
+                          const wrapperScrollW = wrapper.scrollWidth;
+                          
+                          wrapper.style.transform = oldTransform;
+                          
+                          if (wrapperScrollH > 0 && availableH > 0) {
+                            const neededScaleH = availableH / wrapperScrollH;
+                            const neededScaleW = availableW / wrapperScrollW;
+                            let neededScale = Math.min(neededScaleH, neededScaleW);
+                            
+                            // Adjust for base content scale which will be multiplied in the final transform
+                            neededScale = neededScale / baseContentScale;
+                            
+                            // Don't upscale to infinity, keep sanity limits
+                            neededScale = Math.min(neededScale * 0.95, 2);
+                            setPoster(p => ({...p, contentScale: neededScale, contentVerticalPosition: 50}));
+                          }
+                        }}
+                        className="w-full p-3 bg-zinc-800 text-gold text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-gold hover:text-black transition-colors"
+                      >
+                        Auto Fit Content
+                      </button>
+                      
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 flex items-center justify-between">
+                          <span>Content Size</span>
+                          <span>{poster.contentScale.toFixed(2)}x</span>
+                        </label>
+                        <input 
+                          type="range" 
+                          min="0.5" 
+                          max="2" 
+                          step="0.05"
+                          value={poster.contentScale}
+                          onChange={(e) => setPoster({...poster, contentScale: parseFloat(e.target.value)})}
+                          className="w-full accent-gold"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 flex items-center justify-between">
+                          <span>Vertical Position</span>
+                          <span>{poster.contentVerticalPosition !== undefined ? poster.contentVerticalPosition : 50}%</span>
+                        </label>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          step="1"
+                          value={poster.contentVerticalPosition !== undefined ? poster.contentVerticalPosition : 50}
+                          onChange={(e) => setPoster({...poster, contentVerticalPosition: parseFloat(e.target.value)})}
+                          className="w-full accent-gold"
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
                 {activeTab === 'branding' && (
                   <motion.div key="brand" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
                     <div className="space-y-4">
@@ -218,10 +349,23 @@ export default function App() {
                     </div>
 
                     <div className="space-y-3">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Logo Settings</label>
+                      <button 
+                        onClick={() => setPoster({...poster, showLogo: !poster.showLogo})}
+                        className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${poster.showLogo ? 'bg-gold/10 border-gold text-gold shadow-[0_0_20px_rgba(203,168,68,0.1)]' : 'bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-3 h-3 rounded-full ${poster.showLogo ? 'bg-gold shadow-[0_0_8px_white]' : 'bg-zinc-800'}`} />
+                          <span className="font-bold">Show Official Logo</span>
+                        </div>
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Brand Mode</label>
                       <div className="flex flex-col gap-3">
                         <button 
-                          onClick={() => setPoster({...poster, theme: 'tavern'})}
+                          onClick={() => setPoster({...poster, theme: 'tavern', footer: 'https://coasterstavern.co.nz'})}
                           className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${poster.theme === 'tavern' ? 'bg-gold/10 border-gold text-gold shadow-[0_0_20px_rgba(203,168,68,0.1)]' : 'bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
                         >
                           <div className={`w-3 h-3 rounded-full ${poster.theme === 'tavern' ? 'bg-gold shadow-[0_0_8px_white]' : 'bg-zinc-800'}`} />
@@ -231,7 +375,7 @@ export default function App() {
                           </div>
                         </button>
                         <button 
-                          onClick={() => setPoster({...poster, theme: 'social_club'})}
+                          onClick={() => setPoster({...poster, theme: 'social_club', footer: 'https://www.facebook.com/CoastersSocialClub'})}
                           className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${poster.theme === 'social_club' ? 'bg-gold/10 border-gold text-gold shadow-[0_0_20px_rgba(203,168,68,0.1)]' : 'bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
                         >
                           <div className={`w-3 h-3 rounded-full ${poster.theme === 'social_club' ? 'bg-gold shadow-[0_0_8px_white]' : 'bg-zinc-800'}`} />
@@ -240,23 +384,17 @@ export default function App() {
                             <span className="text-[10px] opacity-60">Iconic Badge & Community Heritage</span>
                           </div>
                         </button>
+                        <button 
+                          onClick={() => setPoster({...poster, theme: 'both'})}
+                          className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${poster.theme === 'both' ? 'bg-gold/10 border-gold text-gold shadow-[0_0_20px_rgba(203,168,68,0.1)]' : 'bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                        >
+                          <div className={`w-3 h-3 rounded-full ${poster.theme === 'both' ? 'bg-gold shadow-[0_0_8px_white]' : 'bg-zinc-800'}`} />
+                          <div className="text-left">
+                            <span className="block font-bold">Both</span>
+                            <span className="text-[10px] opacity-60">Coasters Tavern & Social Club combined</span>
+                          </div>
+                        </button>
                       </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Page Scale</label>
-                      <div className="grid grid-cols-1 gap-2">
-                        {POSTER_SIZES.map(s => (
-                          <button 
-                            key={s.name}
-                            onClick={() => setPoster({...poster, size: s.name})}
-                            className={`p-3 text-left text-xs rounded-lg border transition-all ${poster.size === s.name ? 'bg-zinc-800 border-zinc-600' : 'bg-transparent border-zinc-800 opacity-60 hover:opacity-100'}`}
-                          >
-                            {s.label}
-                          </button>
-                        ))}
-                      </div>
-                      {poster.size === 'A4' && <p className="text-[9px] text-gold/60 uppercase font-bold mt-1 tracking-wider">Note: 4cm gutter active for standard A4</p>}
                     </div>
                   </motion.div>
                 )}
@@ -265,29 +403,79 @@ export default function App() {
                   <motion.div key="content" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                     <div className="space-y-4">
                        <div className="group" id="control-title">
-                         <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 block mb-2">Headline</label>
-                         <input 
-                           type="text" 
+                         <div className="flex items-center justify-between mb-2">
+                           <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 block">Headline</label>
+                           <div className="flex gap-1">
+                             {(['left', 'center', 'right'] as const).map(a => (
+                               <button key={a} onClick={() => setPoster({...poster, titleAlign: a})} className={`p-1 rounded transition-colors ${poster.titleAlign === a ? 'bg-zinc-800 text-gold' : 'text-zinc-600 hover:text-white'}`}>
+                                 {a === 'left' ? <AlignLeft size={12} /> : a === 'center' ? <AlignCenter size={12} /> : <AlignRight size={12} />}
+                               </button>
+                             ))}
+                           </div>
+                         </div>
+                         <textarea 
                            value={poster.title} 
                            onChange={e => setPoster({...poster, title: e.target.value})}
-                           className={`w-full bg-zinc-950 border border-zinc-800 p-3 rounded-lg focus:border-gold outline-none text-sm transition-colors ${focusedElement === 'title' ? 'border-gold bg-gold/5' : ''}`}
+                           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.blur(); } }}
+                           rows={1}
+                           className={`w-full bg-zinc-950 border border-zinc-800 p-3 rounded-lg focus:border-gold outline-none text-sm transition-colors resize-y ${focusedElement === 'title' ? 'border-gold bg-gold/5' : ''}`}
                          />
                        </div>
                        <div id="control-subtitle">
-                         <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 block mb-2">Secondary Label</label>
-                         <input 
-                           type="text" 
+                         <div className="flex items-center justify-between mb-2">
+                           <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 block">Secondary Label</label>
+                           <div className="flex gap-1">
+                             {(['left', 'center', 'right'] as const).map(a => (
+                               <button key={a} onClick={() => setPoster({...poster, subtitleAlign: a})} className={`p-1 rounded transition-colors ${poster.subtitleAlign === a ? 'bg-zinc-800 text-gold' : 'text-zinc-600 hover:text-white'}`}>
+                                 {a === 'left' ? <AlignLeft size={12} /> : a === 'center' ? <AlignCenter size={12} /> : <AlignRight size={12} />}
+                               </button>
+                             ))}
+                           </div>
+                         </div>
+                         <textarea 
                            value={poster.subtitle} 
                            onChange={e => setPoster({...poster, subtitle: e.target.value})}
-                           className={`w-full bg-zinc-950 border border-zinc-800 p-3 rounded-lg focus:border-gold outline-none text-sm ${focusedElement === 'subtitle' ? 'border-gold bg-gold/5' : ''}`}
+                           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.blur(); } }}
+                           rows={1}
+                           className={`w-full bg-zinc-950 border border-zinc-800 p-3 rounded-lg focus:border-gold outline-none text-sm resize-y ${focusedElement === 'subtitle' ? 'border-gold bg-gold/5' : ''}`}
                          />
                        </div>
                        <div id="control-details">
-                         <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 block mb-2">Event Details</label>
+                         <div className="flex items-center justify-between mb-2">
+                           <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 block">Event Details</label>
+                           <div className="flex gap-1">
+                             {(['left', 'center', 'right'] as const).map(a => (
+                               <button key={a} onClick={() => setPoster({...poster, detailsAlign: a})} className={`p-1 rounded transition-colors ${poster.detailsAlign === a ? 'bg-zinc-800 text-gold' : 'text-zinc-600 hover:text-white'}`}>
+                                 {a === 'left' ? <AlignLeft size={12} /> : a === 'center' ? <AlignCenter size={12} /> : <AlignRight size={12} />}
+                               </button>
+                             ))}
+                           </div>
+                         </div>
                          <textarea 
                            value={poster.details} 
                            onChange={e => setPoster({...poster, details: e.target.value})}
-                           className={`w-full bg-zinc-950 border border-zinc-800 p-3 rounded-lg h-32 focus:border-gold outline-none text-sm resize-none ${focusedElement === 'details' ? 'border-gold bg-gold/5' : ''}`}
+                           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.blur(); } }}
+                           className={`w-full bg-zinc-950 border border-zinc-800 p-3 rounded-lg h-32 focus:border-gold outline-none text-sm resize-y ${focusedElement === 'details' ? 'border-gold bg-gold/5' : ''}`}
+                         />
+                       </div>
+
+                       <div id="control-footer">
+                         <div className="flex items-center justify-between mb-2">
+                           <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 block">Footer Text</label>
+                           <div className="flex gap-1">
+                             {(['left', 'center', 'right'] as const).map(a => (
+                               <button key={a} onClick={() => setPoster({...poster, footerAlign: a})} className={`p-1 rounded transition-colors ${poster.footerAlign === a ? 'bg-zinc-800 text-gold' : 'text-zinc-600 hover:text-white'}`}>
+                                 {a === 'left' ? <AlignLeft size={12} /> : a === 'center' ? <AlignCenter size={12} /> : <AlignRight size={12} />}
+                               </button>
+                             ))}
+                           </div>
+                         </div>
+                         <textarea 
+                           value={poster.footer || ""} 
+                           onChange={e => setPoster({...poster, footer: e.target.value})}
+                           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.blur(); } }}
+                           rows={1}
+                           className={`w-full bg-zinc-950 border border-zinc-800 p-3 rounded-lg focus:border-gold outline-none text-sm resize-y ${focusedElement === 'footer' ? 'border-gold bg-gold/5' : ''}`}
                          />
                        </div>
 
@@ -331,11 +519,11 @@ export default function App() {
                         <div className="space-y-2">
                            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 block">QR Location</label>
                            <div className="grid grid-cols-2 gap-2">
-                              {(['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map(pos => (
+                              {(['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'] as const).map(pos => (
                                 <button 
                                   key={pos}
                                   onClick={() => setPoster({...poster, qrPosition: pos})}
-                                  className={`p-2 text-[10px] uppercase font-bold rounded border transition-all ${poster.qrPosition === pos ? 'bg-gold text-black border-gold' : 'border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                                  className={`p-2 text-[10px] uppercase font-bold rounded border transition-all ${poster.qrPosition === pos ? 'bg-gold text-black border-gold' : 'border-zinc-800 text-zinc-500 hover:border-zinc-700'} ${pos === 'center' ? 'col-span-2' : ''}`}
                                 >
                                   {pos.replace('-', ' ')}
                                 </button>
@@ -352,6 +540,32 @@ export default function App() {
                              />
                            ))}
                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 border-t border-zinc-800 pt-4 mt-4">
+                         <div>
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2 block">QR Shape</label>
+                            <div className="flex gap-2">
+                              {(['square', 'rounded', 'circle'] as const).map(shape => (
+                                 <button
+                                   key={shape}
+                                   onClick={() => setPoster({...poster, qrShape: shape})}
+                                   className={`p-2 text-[9px] uppercase font-bold rounded border transition-all flex-1 ${poster.qrShape === shape ? 'bg-gold text-black border-gold' : 'border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                                 >
+                                   {shape}
+                                 </button>
+                              ))}
+                            </div>
+                         </div>
+                         <div>
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2 block">Center Logo</label>
+                            <button
+                              onClick={() => setPoster({...poster, qrLogo: !poster.qrLogo})}
+                              className={`w-full p-2 text-[9px] uppercase font-bold rounded border transition-all ${poster.qrLogo ? 'bg-gold text-black border-gold' : 'border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                            >
+                              {poster.qrLogo ? 'Enabled' : 'Disabled'}
+                            </button>
+                         </div>
                       </div>
                     </div>
                   </motion.div>
@@ -370,13 +584,116 @@ export default function App() {
                            >
                              <span className="text-[11px] font-medium text-zinc-400 group-hover:text-white">{p.name}</span>
                              <div className="flex gap-1">
-                               <div className="w-4 h-4 rounded-full" style={{ backgroundColor: p.bg }} />
-                               <div className="w-4 h-4 rounded-full" style={{ backgroundColor: p.text }} />
-                               <div className="w-4 h-4 rounded-full" style={{ backgroundColor: p.accent }} />
+                               <div className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: p.bg }} />
+                               <div className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: p.text }} />
+                               <div className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: p.accent }} />
                              </div>
                            </button>
                          ))}
                        </div>
+                     </div>
+
+                     <div className="space-y-3 pt-6 border-t border-zinc-800">
+                       <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Custom Colors</label>
+                       <div className="grid grid-cols-3 gap-2 mb-4">
+                         <div className="flex flex-col gap-1">
+                           <span className="text-[9px] text-zinc-500 text-center uppercase">Background</span>
+                           <input 
+                             type="color" 
+                             value={poster.backgroundColor}
+                             onChange={e => setPoster({...poster, backgroundColor: e.target.value})}
+                             className="w-full h-8 rounded border border-zinc-800 cursor-pointer bg-transparent"
+                           />
+                         </div>
+                         <div className="flex flex-col gap-1">
+                           <span className="text-[9px] text-zinc-500 text-center uppercase">Base Text</span>
+                           <input 
+                             type="color" 
+                             value={poster.textColor}
+                             onChange={e => setPoster({...poster, textColor: e.target.value})}
+                             className="w-full h-8 rounded border border-zinc-800 cursor-pointer bg-transparent"
+                           />
+                         </div>
+                         <div className="flex flex-col gap-1">
+                           <span className="text-[9px] text-zinc-500 text-center uppercase">Base Accent</span>
+                           <input 
+                             type="color" 
+                             value={poster.accentColor}
+                             onChange={e => setPoster({...poster, accentColor: e.target.value})}
+                             className="w-full h-8 rounded border border-zinc-800 cursor-pointer bg-transparent"
+                           />
+                         </div>
+                       </div>
+                       
+                       <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 block mt-4">Advanced Element Colors</label>
+                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                         <div className="flex flex-col gap-1">
+                           <span className="text-[9px] text-zinc-500 text-center uppercase">Headline</span>
+                           <input type="color" value={poster.titleColor || poster.textColor} onChange={e => setPoster({...poster, titleColor: e.target.value})} className="w-full h-8 rounded border border-zinc-800 cursor-pointer bg-transparent" />
+                         </div>
+                         <div className="flex flex-col gap-1">
+                           <span className="text-[9px] text-zinc-500 text-center uppercase">Subtitle</span>
+                           <input type="color" value={poster.subtitleColor || poster.accentColor} onChange={e => setPoster({...poster, subtitleColor: e.target.value})} className="w-full h-8 rounded border border-zinc-800 cursor-pointer bg-transparent" />
+                         </div>
+                         <div className="flex flex-col gap-1">
+                           <span className="text-[9px] text-zinc-500 text-center uppercase">Details</span>
+                           <input type="color" value={poster.detailsColor || poster.textColor} onChange={e => setPoster({...poster, detailsColor: e.target.value})} className="w-full h-8 rounded border border-zinc-800 cursor-pointer bg-transparent" />
+                         </div>
+                         <div className="flex flex-col gap-1">
+                           <span className="text-[9px] text-zinc-500 text-center uppercase">Footer</span>
+                           <input type="color" value={poster.footerColor || poster.accentColor} onChange={e => setPoster({...poster, footerColor: e.target.value})} className="w-full h-8 rounded border border-zinc-800 cursor-pointer bg-transparent" />
+                         </div>
+                         <div className="flex flex-col gap-1">
+                           <span className="text-[9px] text-zinc-500 text-center uppercase">Logo Base</span>
+                           <input type="color" value={poster.logoColor || poster.backgroundColor} onChange={e => setPoster({...poster, logoColor: e.target.value})} className="w-full h-8 rounded border border-zinc-800 cursor-pointer bg-transparent" />
+                         </div>
+                         <div className="flex flex-col gap-1">
+                           <span className="text-[9px] text-zinc-500 text-center uppercase">Logo Accent</span>
+                           <input type="color" value={poster.logoAccent || poster.accentColor} onChange={e => setPoster({...poster, logoAccent: e.target.value})} className="w-full h-8 rounded border border-zinc-800 cursor-pointer bg-transparent" />
+                         </div>
+                       </div>
+                     </div>
+
+                     <div className="space-y-4 pt-6 border-t border-zinc-800">
+                       <div className="flex justify-between items-center">
+                         <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Reference Overlay</label>
+                         {poster.referenceImage && (
+                           <button 
+                             onClick={() => setPoster({...poster, referenceImage: undefined})}
+                             className="text-[9px] text-red-400 hover:text-red-300 uppercase font-bold"
+                           >
+                             Clear
+                           </button>
+                         )}
+                       </div>
+                       
+                       <div className="grid grid-cols-2 gap-2">
+                         {LAYOUT_SAMPLES.map(sample => (
+                           <button
+                             key={sample.name}
+                             onClick={() => setPoster({...poster, referenceImage: sample.path})}
+                             className={`text-left p-2 rounded border text-[10px] uppercase font-bold tracking-tight transition-all truncate ${poster.referenceImage === sample.path ? 'bg-gold/20 border-gold text-gold' : 'border-zinc-800 text-zinc-400 hover:border-zinc-600'}`}
+                             title={sample.name}
+                           >
+                             {sample.name}
+                           </button>
+                         ))}
+                       </div>
+
+                       {poster.referenceImage && (
+                         <div className="space-y-2 mt-4 bg-zinc-950 p-3 rounded border border-zinc-800">
+                           <div className="flex justify-between items-center">
+                             <span className="text-[9px] uppercase text-zinc-500">Overlay Opacity</span>
+                             <span className="text-[9px] text-gold font-mono">{(poster.referenceOpacity || 0.5) * 100}%</span>
+                           </div>
+                           <input 
+                             type="range" min="0" max="1" step="0.05"
+                             value={poster.referenceOpacity || 0.5}
+                             onChange={e => setPoster({...poster, referenceOpacity: parseFloat(e.target.value)})}
+                             className="w-full h-1 accent-gold"
+                           />
+                         </div>
+                       )}
                      </div>
 
                      <div className="space-y-4 pt-6 border-t border-zinc-800">
@@ -394,13 +711,16 @@ export default function App() {
 
                      <div className="space-y-4">
                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Asset Management</label>
-                       <div className="flex flex-col gap-4">
+
+                       {/* Background Image */}
+                       <div className="flex flex-col gap-4 border border-zinc-800 rounded-xl p-4 bg-zinc-900/50">
+                         <span className="text-[11px] font-bold uppercase text-zinc-400">Background Image</span>
                          <button 
                            onClick={() => fileInputRef.current?.click()}
-                           className="w-full h-16 rounded-xl border-2 border-dashed border-zinc-800 flex items-center justify-center gap-3 hover:border-gold hover:bg-gold/5 transition-all text-zinc-500 hover:text-gold"
+                           className="w-full h-10 rounded-lg border-2 border-dashed border-zinc-800 flex items-center justify-center gap-2 hover:border-gold hover:bg-gold/5 transition-all text-zinc-500 hover:text-gold"
                          >
-                           <ImageIcon className="w-5 h-5" />
-                           <span className="text-xs font-bold uppercase">Insert Imagery</span>
+                           <ImageIcon className="w-4 h-4" />
+                           <span className="text-xs font-bold uppercase">Insert Background</span>
                          </button>
                          <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => {
                             const file = e.target.files?.[0];
@@ -414,7 +734,7 @@ export default function App() {
                          {poster.image && (
                            <div className="space-y-4">
                              <div className="relative rounded-xl overflow-hidden shadow-2xl border border-zinc-800">
-                               <img src={poster.image} className="w-full h-32 object-cover grayscale opacity-50" alt="" />
+                               <img src={poster.image} className="w-full h-24 object-cover grayscale opacity-50" alt="" />
                                <button 
                                  onClick={() => setPoster({...poster, image: undefined})}
                                  className="absolute top-2 right-2 p-1 bg-red-600 rounded-full hover:scale-110 transition-transform"
@@ -469,6 +789,92 @@ export default function App() {
                                     onChange={e => setPoster({...poster, overlayOpacity: parseFloat(e.target.value)})}
                                     className="w-full h-1 accent-gold"
                                   />
+                               </div>
+                             </div>
+                           </div>
+                         )}
+
+                         {/* Solid Background Control */}
+                         <div className="mt-4 pt-4 border-t border-zinc-800">
+                           <div className="space-y-1">
+                              <div className="flex justify-between items-center">
+                                <label className="text-[10px] font-bold uppercase text-zinc-500">Solid BG Height</label>
+                                <span className="text-[10px] text-zinc-400 font-mono">{poster.solidBackgroundHeight ?? 50}%</span>
+                              </div>
+                              <input 
+                                type="range" min="0" max="100" step="1"
+                                value={poster.solidBackgroundHeight ?? 50}
+                                onChange={e => setPoster({...poster, solidBackgroundHeight: parseInt(e.target.value)})}
+                                className="w-full h-1 accent-gold"
+                              />
+                           </div>
+                         </div>
+                       </div>
+
+                       {/* Foreground Image */}
+                       <div className="flex flex-col gap-4 border border-zinc-800 rounded-xl p-4 bg-zinc-900/50 mt-4">
+                         <span className="text-[11px] font-bold uppercase text-zinc-400">Foreground Image</span>
+                         <button 
+                           onClick={() => foregroundFileInputRef.current?.click()}
+                           className="w-full h-10 rounded-lg border-2 border-dashed border-zinc-800 flex items-center justify-center gap-2 hover:border-gold hover:bg-gold/5 transition-all text-zinc-500 hover:text-gold"
+                         >
+                           <ImageIcon className="w-4 h-4" />
+                           <span className="text-xs font-bold uppercase">Insert Foreground</span>
+                         </button>
+                         <input type="file" ref={foregroundFileInputRef} className="hidden" accept="image/*" onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => setPoster({...poster, foregroundImage: reader.result as string});
+                              reader.readAsDataURL(file);
+                            }
+                         }} />
+                         
+                         {poster.foregroundImage && (
+                           <div className="space-y-4">
+                             <div className="relative rounded-xl overflow-hidden shadow-2xl border border-zinc-800 bg-black/20">
+                               <img src={poster.foregroundImage} className="w-full h-24 object-contain opacity-80" alt="" />
+                               <button 
+                                 onClick={() => setPoster({...poster, foregroundImage: undefined})}
+                                 className="absolute top-2 right-2 p-1 bg-red-600 rounded-full hover:scale-110 transition-transform"
+                               >
+                                 <Trash2 className="w-4 h-4" />
+                               </button>
+                             </div>
+                             
+                             <div className="space-y-4 bg-zinc-950/50 p-4 rounded-xl border border-zinc-800">
+                               <div className="space-y-1">
+                                  <div className="flex justify-between items-center">
+                                    <label className="text-[8px] font-bold uppercase text-zinc-500">Scale</label>
+                                    <span className="text-[8px] text-zinc-600">{(poster.foregroundScale * 100).toFixed(0)}%</span>
+                                  </div>
+                                  <input 
+                                    type="range" min="0.1" max="5" step="0.05"
+                                    value={poster.foregroundScale}
+                                    onChange={e => setPoster({...poster, foregroundScale: parseFloat(e.target.value)})}
+                                    className="w-full h-1 accent-gold"
+                                  />
+                               </div>
+
+                               <div className="grid grid-cols-2 gap-4">
+                                 <div className="space-y-1">
+                                    <label className="text-[8px] font-bold uppercase text-zinc-500">Horizontal</label>
+                                    <input 
+                                      type="range" min="-200" max="200" step="1"
+                                      value={poster.foregroundOffset.x}
+                                      onChange={e => setPoster({...poster, foregroundOffset: { ...poster.foregroundOffset, x: parseInt(e.target.value) }})}
+                                      className="w-full h-1 accent-gold"
+                                    />
+                                 </div>
+                                 <div className="space-y-1">
+                                    <label className="text-[8px] font-bold uppercase text-zinc-500">Vertical</label>
+                                    <input 
+                                      type="range" min="-200" max="200" step="1"
+                                      value={poster.foregroundOffset.y}
+                                      onChange={e => setPoster({...poster, foregroundOffset: { ...poster.foregroundOffset, y: parseInt(e.target.value) }})}
+                                      className="w-full h-1 accent-gold"
+                                    />
+                                 </div>
                                </div>
                              </div>
                            </div>
@@ -557,106 +963,112 @@ export default function App() {
                 color: poster.textColor
               }}
             >
-              {/* Background Layout: Top 1/3 Photo + Bottom 2/3 Solid */}
-              <div className="absolute inset-0 pointer-events-none flex flex-col">
-                <div className="h-1/3 relative overflow-hidden group/bg">
-                  {poster.image && (
+              {/* Background Split */}
+              <div className="absolute inset-0 pointer-events-none z-0">
+                {/* Top Image Section */}
+                <div 
+                  className="absolute top-0 left-0 right-0 overflow-hidden"
+                  style={{ height: `${100 - (poster.solidBackgroundHeight ?? 50)}%` }}
+                >
+                  {poster.image ? (
                     <img 
                       src={poster.image} 
-                      className="w-full h-full object-cover blur-2xl opacity-60 transition-transform duration-700 brightness-75 scale-110" 
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 pointer-events-none" 
                       style={{ 
+                        opacity: 1 - (poster.overlayOpacity ?? 0.2),
                         transform: `scale(${poster.imageScale * 1.25}) translate(${poster.imageOffset.x}px, ${poster.imageOffset.y}px)`,
                       }}
                       alt="" 
                     />
+                  ) : (
+                    <div className="w-full h-full bg-black/5 flex flex-col items-center justify-center border-b border-dashed border-black/10">
+                      <ImageIcon className="w-12 h-12 text-black/20 mb-4" />
+                      <span className="text-xs uppercase tracking-widest font-bold text-black/30">Background Placeholder</span>
+                    </div>
                   )}
-                  {/* Decorative Overlay for Image Bleed */}
-                  <div 
-                    className="absolute inset-0 bg-gradient-to-b from-transparent" 
-                    style={{ 
-                      backgroundColor: poster.backgroundColor, 
-                      opacity: poster.image ? 0.4 : 0,
-                      backgroundImage: `linear-gradient(to bottom, transparent 0%, ${poster.backgroundColor} 100%)`
-                    }} 
-                  />
                 </div>
-                <div 
-                  className="flex-1" 
-                  style={{ backgroundColor: poster.backgroundColor }} 
-                />
+
+                {/* Foreground Image */}
+                {poster.foregroundImage && (
+                  <img 
+                    src={poster.foregroundImage} 
+                    className="absolute inset-0 w-full h-full object-contain transition-transform duration-700 pointer-events-none z-10" 
+                    style={{ 
+                      transform: `scale(${poster.foregroundScale}) translate(${poster.foregroundOffset.x}px, ${poster.foregroundOffset.y}px)`,
+                    }}
+                    alt="" 
+                  />
+                )}
               </div>
 
-              {/* Content Wrapper for A4 Guard/Margin */}
+              {/* Content Wrapper for Guard/Margin */}
               <div 
-                className="relative z-10 flex-1 flex flex-col items-center justify-between pointer-events-none transition-transform duration-300"
+                id="poster-content-wrapper"
+                className="relative z-20 flex-1 flex flex-col pointer-events-none transition-transform duration-300"
                 style={{ 
-                  margin: `${gutterSize}px`,
-                  transform: `scale(${poster.contentScale})`,
-                  transformOrigin: 'center'
+                  marginTop: `${gutterSize + (poster.marginTop || 0) * 28.346}px`,
+                  marginBottom: `${gutterSize + (poster.marginBottom || 0) * 28.346}px`,
+                  marginLeft: `${gutterSize + (poster.marginLeft || 0) * 28.346}px`,
+                  marginRight: `${gutterSize + (poster.marginRight || 0) * 28.346}px`,
+                  transform: `scale(${poster.contentScale * baseContentScale})`,
+                  transformOrigin: 'center',
+                  alignItems: 'stretch' // Ensure it stretches to edges internally
                 }}
               >
-                {/* Branding Header */}
-                <div 
-                  className="pt-8 flex flex-col items-center cursor-pointer pointer-events-auto hover:ring-2 hover:ring-gold/30 rounded-full p-4 transition-all"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleElementClick('logo', 'branding');
-                  }}
-                >
-                  <div className="w-40 h-40 drop-shadow-[0_20px_20px_rgba(0,0,0,0.3)]">
-                    <CoastersLogo 
-                       theme={poster.theme} 
-                       className="w-full h-full" 
-                       color={poster.backgroundColor}
-                       accentColor={poster.accentColor}
-                    />
-                  </div>
-                </div>
-
-                {/* Footer & QR Container */}
-                <div className="w-full flex-1 flex flex-col items-center justify-between pointer-events-none relative">
+                {/* Main Content Area */}
+                <div id="poster-content-area" className="w-full flex-1 flex flex-col pointer-events-none relative mt-16">
                   {/* Independent QR Code Positioning */}
                   {poster.qrUrl && (
                     <div 
-                      className="absolute bg-white p-5 rounded-2xl shadow-2xl border-2 pointer-events-auto cursor-pointer hover:ring-2 hover:ring-gold transition-all"
+                      className={`absolute bg-white p-5 shadow-2xl border-2 pointer-events-auto cursor-pointer hover:ring-2 hover:ring-gold transition-all flex flex-col items-center justify-center ${poster.qrShape === 'square' ? 'rounded-none' : poster.qrShape === 'circle' ? 'rounded-[3rem]' : 'rounded-2xl'}`}
                       style={{ 
                         borderColor: poster.accentColor,
-                        top: poster.qrPosition.startsWith('top') ? '0' : 'auto',
-                        bottom: poster.qrPosition.startsWith('bottom') ? '0' : 'auto',
-                        left: poster.qrPosition.endsWith('left') ? '0' : 'auto',
-                        right: poster.qrPosition.endsWith('right') ? '0' : 'auto',
+                        top: poster.qrPosition === 'center' ? 'auto' : (poster.qrPosition.startsWith('top') ? '0' : 'auto'),
+                        bottom: poster.qrPosition === 'center' ? '0' : (poster.qrPosition.startsWith('bottom') ? '0' : 'auto'),
+                        left: poster.qrPosition === 'center' ? '50%' : (poster.qrPosition.endsWith('left') ? '0' : 'auto'),
+                        right: poster.qrPosition === 'center' ? 'auto' : (poster.qrPosition.endsWith('right') ? '0' : 'auto'),
+                        transform: poster.qrPosition === 'center' ? 'translateX(-50%)' : 'none'
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleElementClick('qr', 'content');
                       }}
                     >
+                      <p className="text-[9px] text-center mb-3 font-bold text-black uppercase tracking-widest leading-tight">Inquire<br/>Within</p>
                       <QRCodeSVG 
                         value={poster.qrUrl} 
                         size={110} 
                         fgColor={poster.qrColor}
                         level="H"
+                        imageSettings={poster.qrLogo ? {
+                          src: poster.theme === 'social_club' ? '/logo-social.png' : '/logo-tavern.png',
+                          x: undefined,
+                          y: undefined,
+                          height: 28,
+                          width: 28,
+                          excavate: true,
+                        } : undefined}
                       />
-                      <p className="text-[9px] text-center mt-3 font-bold text-black uppercase tracking-widest">Inquire Within</p>
                     </div>
                   )}
 
                   <div 
-                    className="flex-1 flex flex-col items-center justify-center text-center pointer-events-auto cursor-pointer group"
+                    className="flex-1 flex flex-col justify-center pointer-events-auto cursor-pointer group w-full"
+                    style={{ transform: `translateY(${poster.contentVerticalPosition !== undefined ? poster.contentVerticalPosition - 50 : 0}%)` }}
                     onClick={() => handleElementClick('title', 'content')}
                   >
                     <h1 
                       className={`text-8xl md:text-9xl font-serif font-bold uppercase leading-[0.85] tracking-tighter mb-8 transition-all ${focusedElement === 'title' ? 'scale-105 blur-[0.5px]' : 'group-hover:scale-[1.02]'}`}
-                      style={{ color: poster.textColor }}
+                      style={{ color: poster.titleColor || poster.textColor, textAlign: poster.titleAlign || 'center' }}
                     >
                       {poster.title || "COASTERS"}
                     </h1>
                     
-                    <div className="h-1.5 w-32 mb-10" style={{ backgroundColor: poster.accentColor }} />
+                    <div className={`h-1.5 w-32 mb-10 ${poster.titleAlign === 'left' ? 'mr-auto' : poster.titleAlign === 'right' ? 'ml-auto' : 'mx-auto'}`} style={{ backgroundColor: poster.subtitleColor || poster.accentColor }} />
                     
                     <h2 
                       className="text-3xl md:text-4xl font-bold uppercase tracking-[0.4em] mb-12 hover:text-gold transition-colors"
-                      style={{ color: poster.accentColor }}
+                      style={{ color: poster.subtitleColor || poster.accentColor, textAlign: poster.subtitleAlign || 'center' }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleElementClick('subtitle', 'content');
@@ -667,7 +1079,8 @@ export default function App() {
 
                     {(poster.eventDate || poster.eventTime) && (
                       <div 
-                        className="mb-10 flex flex-col items-center gap-2 cursor-pointer hover:scale-105 transition-transform"
+                        className="mb-10 flex flex-col gap-2 cursor-pointer hover:scale-105 transition-transform"
+                        style={{ alignItems: poster.subtitleAlign === 'left' ? 'flex-start' : poster.subtitleAlign === 'right' ? 'flex-end' : 'center' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleElementClick('date', 'content');
@@ -676,7 +1089,7 @@ export default function App() {
                         {poster.eventDate && (
                           <div 
                             className="text-2xl font-black uppercase tracking-[0.2em] px-4 py-2 border-y-2"
-                            style={{ borderColor: poster.accentColor, color: poster.textColor }}
+                            style={{ borderColor: poster.subtitleColor || poster.accentColor, color: poster.titleColor || poster.textColor }}
                           >
                             {poster.eventDate}
                           </div>
@@ -684,7 +1097,7 @@ export default function App() {
                         {poster.eventTime && (
                           <div 
                             className="text-lg font-bold uppercase tracking-[0.3em]"
-                            style={{ color: poster.accentColor }}
+                            style={{ color: poster.subtitleColor || poster.accentColor }}
                           >
                             {poster.eventTime}
                           </div>
@@ -693,8 +1106,8 @@ export default function App() {
                     )}
                     
                     <div 
-                      className="text-xl md:text-2xl font-medium leading-relaxed max-w-2xl whitespace-pre-line opacity-90 hover:opacity-100 transition-opacity"
-                      style={{ color: poster.textColor }}
+                      className="text-xl md:text-2xl font-medium leading-relaxed w-full whitespace-pre-line opacity-90 hover:opacity-100 transition-opacity"
+                      style={{ color: poster.detailsColor || poster.textColor, textAlign: poster.detailsAlign || 'center' }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleElementClick('details', 'content');
@@ -704,24 +1117,57 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div 
-                    className="w-full flex items-end justify-between pb-8 cursor-help pointer-events-auto"
-                    onClick={() => handleElementClick('branding', 'branding')}
-                  >
-                    <div className="text-left space-y-1">
-                      <p className="text-xs font-bold uppercase tracking-[0.3em] opacity-40">Coastal Heritage</p>
-                      <p className="text-lg font-serif italic" style={{ color: poster.accentColor }}>Since 1876</p>
-                    </div>
-                    {/* Space for QR if it were static - removed as it's now absolute */}
-                    <div className="w-[154px]" /> 
+                  {/* Footer Content */}
+                  <div className="w-full flex-shrink-0 flex flex-col justify-end pb-8">
+                    {/* Footer Logo */}
+                    {poster.showLogo && (
+                      <div 
+                        className="pt-8 flex flex-col cursor-pointer pointer-events-auto hover:ring-2 hover:ring-gold/30 rounded-full p-4 transition-all"
+                        style={{ alignItems: poster.footerAlign === 'left' ? 'flex-start' : poster.footerAlign === 'right' ? 'flex-end' : 'center' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleElementClick('logo', 'branding');
+                        }}
+                      >
+                        <div className="w-24 h-24 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
+                          <CoastersLogo 
+                             theme={poster.theme} 
+                             className="w-full h-full" 
+                             color={poster.logoColor || poster.backgroundColor}
+                             accentColor={poster.logoAccent || poster.accentColor}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Footer Text */}
+                    {poster.footer && (
+                      <div 
+                        className="mt-6 text-sm md:text-base font-bold tracking-widest uppercase cursor-pointer pointer-events-auto hover:opacity-80 transition-opacity whitespace-pre-line"
+                        style={{ color: poster.footerColor || poster.accentColor, textAlign: poster.footerAlign || 'center' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleElementClick('footer', 'content');
+                        }}
+                      >
+                        {poster.footer}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Debug Margin Lines (Only visible when A4 and editing) */}
-              {isA4 && !isPreviewMode && (
-                <div className="absolute inset-0 pointer-events-none border-[113px] border-white/5 opacity-50 flex items-center justify-center">
-                  <div className="absolute top-0 left-0 text-[10px] bg-gold text-black px-2 mt-[114px] ml-[114px]">4cm Gutter Boundary</div>
+              {/* Debug Margin Lines (Only visible when using gutters and editing) */}
+              {(poster.size === 'A4' || poster.size === 'A3 Poster') && !isPreviewMode && (
+                <div 
+                  className="absolute inset-0 pointer-events-none opacity-50 flex items-center justify-center"
+                  style={{ borderWidth: `${gutterSize}px`, borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                >
+                  <div 
+                    className="absolute top-0 left-0 text-[10px] bg-gold text-black px-2 mt-1 ml-1"
+                  >
+                    {poster.size === 'A4' ? '4cm' : '2cm'} Gutter Boundary
+                  </div>
                 </div>
               )}
               
@@ -729,6 +1175,16 @@ export default function App() {
               <div className="absolute top-0 left-0 w-full h-3 bg-white/10" />
               <div className="absolute bottom-0 left-0 w-full h-3 bg-black/20" />
             </div>
+            
+            {/* Reference Overlay Image (outside poster-output so it doesn't get saved/printed) */}
+            {poster.referenceImage && !isPreviewMode && (
+              <img 
+                src={poster.referenceImage}
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none mix-blend-difference z-[100]"
+                style={{ opacity: poster.referenceOpacity || 0.5, mixBlendMode: 'normal' }}
+                alt="Reference Layout Sample"
+              />
+            )}
           </div>
 
         {/* Overlay toggle for mobile/fullscreen */}
