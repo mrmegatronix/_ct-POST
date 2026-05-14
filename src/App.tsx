@@ -24,7 +24,11 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  MoveVertical
+  MoveVertical,
+  Cloud,
+  Mail,
+  MonitorDown,
+  Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -34,6 +38,235 @@ import confetti from 'canvas-confetti';
 import { COLORS, POSTER_SIZES, INITIAL_POSTER, PosterData, COLOR_PALETTES, LAYOUT_SAMPLES } from './constants';
 import { CoastersLogo } from './components/CoastersLogo';
 
+
+export function PosterDisplay({ poster, currentSize, innerRef, gutterSize, baseContentScale, handleElementClick, focusedElement, isPreviewMode }: any) {
+  return (
+<div 
+              ref={innerRef}
+              id="poster-output"
+              className="relative overflow-hidden flex flex-col"
+              style={{ 
+                width: currentSize.width, 
+                height: currentSize.height,
+                backgroundColor: poster.backgroundColor,
+                color: poster.textColor
+              }}
+            >
+              {/* Background Split */}
+              <div className="absolute inset-0 pointer-events-none z-0">
+                {/* Top Image Section */}
+                <div 
+                  className="absolute top-0 left-0 right-0 overflow-hidden"
+                  style={{ height: `${100 - (poster.solidBackgroundHeight ?? 50)}%` }}
+                >
+                  {poster.image ? (
+                    <img 
+                      src={poster.image} 
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 pointer-events-none" 
+                      style={{ 
+                        opacity: 1 - (poster.overlayOpacity ?? 0.2),
+                        transform: `scale(${poster.imageScale * 1.25}) translate(${poster.imageOffset.x}px, ${poster.imageOffset.y}px)`,
+                      }}
+                      alt="" 
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-black/5 flex flex-col items-center justify-center border-b border-dashed border-black/10">
+                      <ImageIcon className="w-12 h-12 text-black/20 mb-4" />
+                      <span className="text-xs uppercase tracking-widest font-bold text-black/30">Background Placeholder</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Foreground Image */}
+                {poster.foregroundImage && (
+                  <img 
+                    src={poster.foregroundImage} 
+                    className="absolute inset-0 w-full h-full object-contain transition-transform duration-700 pointer-events-none z-10" 
+                    style={{ 
+                      transform: `scale(${poster.foregroundScale}) translate(${poster.foregroundOffset.x}px, ${poster.foregroundOffset.y}px)`,
+                    }}
+                    alt="" 
+                  />
+                )}
+              </div>
+
+              {/* Content Wrapper for Guard/Margin */}
+              <div 
+                id="poster-content-wrapper"
+                className="relative z-20 flex-1 flex flex-col pointer-events-none transition-transform duration-300"
+                style={{ 
+                  marginTop: `${gutterSize + (poster.marginTop || 0) * 28.346}px`,
+                  marginBottom: `${gutterSize + (poster.marginBottom || 0) * 28.346}px`,
+                  marginLeft: `${gutterSize + (poster.marginLeft || 0) * 28.346}px`,
+                  marginRight: `${gutterSize + (poster.marginRight || 0) * 28.346}px`,
+                  transform: `scale(${poster.contentScale * baseContentScale})`,
+                  transformOrigin: 'center',
+                  alignItems: 'stretch' // Ensure it stretches to edges internally
+                }}
+              >
+                {/* Main Content Area */}
+                <div id="poster-content-area" className="w-full flex-1 flex flex-col pointer-events-none relative mt-16">
+                  {/* Independent QR Code Positioning */}
+                  {poster.qrUrl && (
+                    <div 
+                      className={`absolute bg-white p-5 shadow-2xl border-2 pointer-events-auto cursor-pointer hover:ring-2 hover:ring-gold transition-all flex flex-col items-center justify-center ${poster.qrShape === 'square' ? 'rounded-none' : poster.qrShape === 'circle' ? 'rounded-[3rem]' : 'rounded-2xl'}`}
+                      style={{ 
+                        borderColor: poster.accentColor,
+                        top: poster.qrPosition === 'center' ? 'auto' : (poster.qrPosition.startsWith('top') ? '0' : 'auto'),
+                        bottom: poster.qrPosition === 'center' ? '0' : (poster.qrPosition.startsWith('bottom') ? '0' : 'auto'),
+                        left: poster.qrPosition === 'center' ? '50%' : (poster.qrPosition.endsWith('left') ? '0' : 'auto'),
+                        right: poster.qrPosition === 'center' ? 'auto' : (poster.qrPosition.endsWith('right') ? '0' : 'auto'),
+                        transform: poster.qrPosition === 'center' ? 'translateX(-50%)' : 'none'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleElementClick('qr', 'content');
+                      }}
+                    >
+                      <p className="text-[9px] text-center mb-3 font-bold text-black uppercase tracking-widest leading-tight">Inquire<br/>Within</p>
+                      <QRCodeSVG 
+                        value={poster.qrUrl} 
+                        size={110} 
+                        fgColor={poster.qrColor}
+                        level="H"
+                        imageSettings={poster.qrLogo ? {
+                          src: poster.theme === 'social_club' ? '/logo-social.png' : '/logo-tavern.png',
+                          x: undefined,
+                          y: undefined,
+                          height: 28,
+                          width: 28,
+                          excavate: true,
+                        } : undefined}
+                      />
+                    </div>
+                  )}
+
+                  <div 
+                    className="flex-1 flex flex-col justify-center pointer-events-auto cursor-pointer group w-full"
+                    style={{ transform: `translateY(${poster.contentVerticalPosition !== undefined ? poster.contentVerticalPosition - 50 : 0}%)` }}
+                    onClick={() => handleElementClick('title', 'content')}
+                  >
+                    <h1 
+                      className={`text-8xl md:text-9xl font-serif font-bold uppercase leading-[0.85] tracking-tighter mb-8 transition-all ${focusedElement === 'title' ? 'scale-105 blur-[0.5px]' : 'group-hover:scale-[1.02]'}`}
+                      style={{ color: poster.titleColor || poster.textColor, textAlign: poster.titleAlign || 'center' }}
+                    >
+                      {poster.title || "COASTERS"}
+                    </h1>
+                    
+                    <div className={`h-1.5 w-32 mb-10 ${poster.titleAlign === 'left' ? 'mr-auto' : poster.titleAlign === 'right' ? 'ml-auto' : 'mx-auto'}`} style={{ backgroundColor: poster.subtitleColor || poster.accentColor }} />
+                    
+                    <h2 
+                      className="text-3xl md:text-4xl font-bold uppercase tracking-[0.4em] mb-12 hover:text-gold transition-colors"
+                      style={{ color: poster.subtitleColor || poster.accentColor, textAlign: poster.subtitleAlign || 'center' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleElementClick('subtitle', 'content');
+                      }}
+                    >
+                      {poster.subtitle || "EST. 1876"}
+                    </h2>
+
+                    {(poster.eventDate || poster.eventTime) && (
+                      <div 
+                        className="mb-10 flex flex-col gap-2 cursor-pointer hover:scale-105 transition-transform"
+                        style={{ alignItems: poster.subtitleAlign === 'left' ? 'flex-start' : poster.subtitleAlign === 'right' ? 'flex-end' : 'center' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleElementClick('date', 'content');
+                        }}
+                      >
+                        {poster.eventDate && (
+                          <div 
+                            className="text-2xl font-black uppercase tracking-[0.2em] px-4 py-2 border-y-2"
+                            style={{ borderColor: poster.subtitleColor || poster.accentColor, color: poster.titleColor || poster.textColor }}
+                          >
+                            {poster.eventDate}
+                          </div>
+                        )}
+                        {poster.eventTime && (
+                          <div 
+                            className="text-lg font-bold uppercase tracking-[0.3em]"
+                            style={{ color: poster.subtitleColor || poster.accentColor }}
+                          >
+                            {poster.eventTime}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div 
+                      className="text-xl md:text-2xl font-medium leading-relaxed w-full whitespace-pre-line opacity-90 hover:opacity-100 transition-opacity"
+                      style={{ color: poster.detailsColor || poster.textColor, textAlign: poster.detailsAlign || 'center' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleElementClick('details', 'content');
+                      }}
+                    >
+                      {poster.details}
+                    </div>
+                  </div>
+
+                  {/* Footer Content */}
+                  <div className="w-full flex-shrink-0 flex flex-col justify-end pb-8">
+                    {/* Footer Logo */}
+                    {poster.showLogo && (
+                      <div 
+                        className="pt-8 flex flex-col cursor-pointer pointer-events-auto hover:ring-2 hover:ring-gold/30 rounded-full p-4 transition-all"
+                        style={{ alignItems: poster.footerAlign === 'left' ? 'flex-start' : poster.footerAlign === 'right' ? 'flex-end' : 'center' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleElementClick('logo', 'branding');
+                        }}
+                      >
+                        <div className="w-24 h-24 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
+                          <CoastersLogo 
+                             theme={poster.theme} 
+                             className="w-full h-full" 
+                             color={poster.logoColor || poster.backgroundColor}
+                             accentColor={poster.logoAccent || poster.accentColor}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Footer Text */}
+                    {poster.footer && (
+                      <div 
+                        className="mt-6 text-sm md:text-base font-bold tracking-widest uppercase cursor-pointer pointer-events-auto hover:opacity-80 transition-opacity whitespace-pre-line"
+                        style={{ color: poster.footerColor || poster.accentColor, textAlign: poster.footerAlign || 'center' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleElementClick('footer', 'content');
+                        }}
+                      >
+                        {poster.footer}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Debug Margin Lines (Only visible when using gutters and editing) */}
+              {(poster.size === 'A4' || poster.size === 'A3 Poster') && !isPreviewMode && (
+                <div 
+                  className="absolute inset-0 pointer-events-none opacity-50 flex items-center justify-center"
+                  style={{ borderWidth: `${gutterSize}px`, borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                >
+                  <div 
+                    className="absolute top-0 left-0 text-[10px] bg-gold text-black px-2 mt-1 ml-1"
+                  >
+                    {poster.size === 'A4' ? '4cm' : '2cm'} Gutter Boundary
+                  </div>
+                </div>
+              )}
+              
+              {/* Style Guide Trim */}
+              <div className="absolute top-0 left-0 w-full h-3 bg-white/10" />
+              <div className="absolute bottom-0 left-0 w-full h-3 bg-black/20" />
+            </div>
+  );
+}
+
 export default function App() {
   const [poster, setPoster] = useState<PosterData>(INITIAL_POSTER);
   const [gallery, setGallery] = useState<PosterData[]>([]);
@@ -42,6 +275,25 @@ export default function App() {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [focusedElement, setFocusedElement] = useState<string | null>(null);
+  const [hasExported, setHasExported] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [pin, setPin] = useState('');
+
+  useEffect(() => {
+    setHasExported(false);
+  }, [poster]);
+
+  const handlePin = (val: string) => {
+    const newPin = pin + val;
+    setPin(newPin);
+    if (newPin.length === 4) {
+      if (newPin === '5551') {
+        setIsUnlocked(true);
+      } else {
+        setTimeout(() => setPin(''), 500);
+      }
+    }
+  };
 
   useEffect(() => {
     // Set initial size
@@ -74,40 +326,84 @@ export default function App() {
     }, 100);
   };
 
-  const handleExport = async (format: 'png' | 'jpg' | 'pdf') => {
+  const handleExportAll = async () => {
     if (!posterRef.current) return;
     
     try {
-      if (format === 'pdf') {
-        const dataUrl = await toPng(posterRef.current, { quality: 1, pixelRatio: 3 });
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'px',
-          format: 'a4'
-        });
-        
-        const imgProps = pdf.getImageProperties(dataUrl);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        
-        pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`coasters-${poster.theme}-${Date.now()}.pdf`);
-      } else {
-        const dataUrl = format === 'png' 
-          ? await toPng(posterRef.current, { quality: 1, pixelRatio: 2 })
-          : await toJpeg(posterRef.current, { quality: 0.95, pixelRatio: 2 });
-        
-        const link = document.createElement('a');
-        link.download = `coasters-${poster.theme}-${Date.now()}.${format}`;
-        link.href = dataUrl;
-        link.click();
-      }
+      const currentSize = POSTER_SIZES.find(s => s.name === poster.size) || POSTER_SIZES[1];
+      const now = new Date();
+      const yy = String(now.getFullYear()).slice(2);
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
       
+      const safeTitle = (poster.title || 'Untitled').replace(/[^a-z0-9]/gi, '_').toUpperCase();
+      const dimensions = `${currentSize.width}x${currentSize.height}`;
+      const timestamp = `${yy}${mm}${dd}_${hh}${min}`;
+      
+      const baseFilename = `CT-NIM-${safeTitle}-${dimensions}-${timestamp}`;
+
+      // Try File System Access API
+      let dirHandle: any = null;
+      if ('showDirectoryPicker' in window) {
+        try {
+          dirHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+        } catch (err) {
+          console.warn('Directory picking cancelled or not supported', err);
+          // fall back to standard download
+        }
+      }
+
+      // Helper to save a file
+      const saveFile = async (data: string | Blob, ext: string, isBlob = false) => {
+        const filename = `${baseFilename}.${ext}`;
+        if (dirHandle) {
+          const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+          const writable = await fileHandle.createWritable();
+          if (isBlob) {
+            await writable.write(data);
+          } else {
+            const blob = await (await fetch(data as string)).blob();
+            await writable.write(blob);
+          }
+          await writable.close();
+        } else {
+          const link = document.createElement('a');
+          link.download = filename;
+          if (isBlob) {
+            link.href = URL.createObjectURL(data as Blob);
+          } else {
+            link.href = data as string;
+          }
+          link.click();
+        }
+      };
+
+      // Generate PNG
+      const pngData = await toPng(posterRef.current, { quality: 1, pixelRatio: 4 });
+      await saveFile(pngData, 'png');
+
+      // Generate JPG
+      const jpgData = await toJpeg(posterRef.current, { quality: 1, pixelRatio: 4 });
+      await saveFile(jpgData, 'jpg');
+
+      // Generate PDF
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' });
+      const imgProps = pdf.getImageProperties(pngData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      pdf.addImage(pngData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const pdfBlob = pdf.output('blob');
+      await saveFile(pdfBlob, 'pdf', true);
+
       confetti({
         particleCount: 100,
         spread: 70,
         origin: { y: 0.6 }
       });
+      alert(`Saved all 3 formats as ${baseFilename}`);
+      setHasExported(true);
     } catch (err) {
       console.error('Export failed', err);
     }
@@ -124,7 +420,6 @@ export default function App() {
     localStorage.setItem('coasters-gallery', JSON.stringify(newGallery));
     confetti({
       particleCount: 50,
-      radius: 100,
       origin: { y: 0.9 }
     });
     setActiveTab('gallery');
@@ -151,10 +446,44 @@ export default function App() {
 
   const finalScale = isPreviewMode ? autoScale * 1.1 : autoScale;
 
+  if (!isUnlocked) {
+    return (
+      <div className="fixed inset-0 bg-zinc-950 flex flex-col items-center justify-center z-[9999] overflow-hidden">
+        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle at center, #CBA844 0%, transparent 60%)' }} />
+        <div className="relative bg-[#0a0a0a] border border-white/5 p-8 rounded-3xl shadow-2xl flex flex-col items-center w-full max-w-sm">
+           <div className="w-16 h-16 bg-gold/10 rounded-full flex items-center justify-center mb-6 border border-gold/20 shadow-[0_0_30px_rgba(203,168,68,0.15)]">
+              <Lock className="w-8 h-8 text-gold" />
+           </div>
+           <h1 className="text-[14px] leading-relaxed text-center font-bold uppercase tracking-[0.2em] text-white mb-2 max-w-[250px]">N.I.M. Module Access Restricted</h1>
+           <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-8 font-bold">Enter Authorization Pin</p>
+
+           <div className="flex gap-4 mb-8">
+             {[0, 1, 2, 3].map(i => (
+               <div key={i} className={`w-14 h-16 rounded-xl border-2 flex items-center justify-center text-3xl font-bold transition-all ${pin.length > i ? 'border-gold text-gold bg-gold/10 shadow-[0_0_15px_rgba(203,168,68,0.2)]' : 'border-zinc-800 text-zinc-600 bg-zinc-950'}`}>
+                 {pin[i] ? '•' : ''}
+               </div>
+             ))}
+           </div>
+
+           <div className="grid grid-cols-3 gap-3 w-full">
+             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+               <button key={num} onClick={() => handlePin(num.toString())} className="h-14 bg-zinc-900/50 border border-zinc-800 rounded-xl hover:bg-gold/10 hover:border-gold hover:text-gold transition-all text-xl font-bold active:scale-95">
+                 {num}
+               </button>
+             ))}
+             <button onClick={() => setPin('')} className="h-14 bg-zinc-900/50 border border-zinc-800 rounded-xl hover:bg-red-500/10 hover:border-red-500 hover:text-red-500 transition-all text-xs font-bold uppercase active:scale-95">CLR</button>
+             <button onClick={() => handlePin('0')} className="h-14 bg-zinc-900/50 border border-zinc-800 rounded-xl hover:bg-gold/10 hover:border-gold hover:text-gold transition-all text-xl font-bold active:scale-95">0</button>
+             <button disabled className="h-14 bg-transparent border border-transparent rounded-xl opacity-0"></button>
+           </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-screen bg-zinc-950 text-white overflow-hidden">
+    <div className="flex h-screen bg-[#0a0a0a] text-white overflow-hidden">
       {/* Dark Sidebar Navigation */}
-      <nav className="w-16 md:w-20 bg-zinc-950 border-r border-zinc-800 flex flex-col items-center py-8 gap-10 flex-shrink-0 z-30">
+      <nav className="w-24 bg-zinc-950 border-r border-zinc-800 flex flex-col items-center py-8 gap-6 flex-shrink-0 z-30">
         <div className="text-gold mb-4 group cursor-pointer" onClick={() => setIsPreviewMode(!isPreviewMode)}>
           <div className={`p-3 rounded-full transition-all ${isPreviewMode ? 'bg-gold text-black' : 'hover:bg-gold/10'}`}>
             <Eye className="w-6 h-6" />
@@ -923,269 +1252,112 @@ export default function App() {
       <main className={`flex-1 relative transition-all duration-700 bg-zinc-900 ${isPreviewMode ? 'p-0' : 'p-6 md:p-12'} overflow-auto flex flex-col items-center`}>
         {/* Toolbelt */}
         {!isPreviewMode && (
-          <div className="w-full max-w-4xl flex justify-between items-center mb-10 bg-zinc-950/50 backdrop-blur-md border border-white/5 rounded-2xl p-4 shadow-2xl">
-            <div className="flex items-center gap-6">
+          <div className="w-full max-w-5xl flex justify-between items-center mb-10 bg-zinc-900/40 backdrop-blur-2xl border border-white/5 rounded-3xl p-4 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center gap-6 px-4">
               <div className="flex flex-col">
                 <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-500">Working On</span>
-                <span className="text-sm font-bold text-gold">{poster.theme === 'tavern' ? 'Coasters Tavern' : 'Social Club'}</span>
+                <span className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-gold to-yellow-300">{poster.theme === 'tavern' ? 'Coasters Tavern' : 'Social Club'}</span>
               </div>
               <div className="h-8 w-px bg-white/10" />
-              <button onClick={() => setPoster(INITIAL_POSTER)} className="text-xs font-bold uppercase text-zinc-400 hover:text-white transition-colors">Reset</button>
+              <button onClick={() => setPoster(INITIAL_POSTER)} className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Reset</button>
             </div>
 
-            <div className="flex items-center gap-3">
-              <HeaderAction icon={<Printer />} label="Print" onClick={handlePrint} />
-              <HeaderAction icon={<Download />} label="JPG" onClick={() => handleExport('jpg')} />
-              <HeaderAction icon={<Download />} label="PDF" onClick={() => handleExport('pdf')} />
-              <div className="h-8 w-px bg-white/10 mx-2" />
-              <HeaderAction icon={<Send />} label="Push to Cloud" onClick={() => {
-                alert("Poster pushed to venue servers.");
+            <div className="flex items-center gap-1.5 overflow-x-auto bg-black/20 p-2 rounded-2xl border border-white/5">
+              <HeaderAction icon={<MonitorDown />} label="Save to PC" onClick={handleExportAll} highlighted />
+              <div className="h-6 w-px bg-white/10 mx-1 shrink-0" />
+              <HeaderAction icon={<Printer />} label="Print" onClick={handlePrint} disabled={!hasExported} />
+              <HeaderAction icon={<Cloud />} label="GDrive" onClick={() => {
+                alert("Poster successfully uploaded to Google Drive.");
                 confetti();
-              }} highlighted />
-              <HeaderAction icon={<Save />} label="Lock & Archive" onClick={handleSaveToGallery} highlighted />
+              }} disabled={!hasExported} />
+              <HeaderAction icon={<Mail />} label="Email" onClick={() => {
+                alert("Email queued for sending.");
+                confetti();
+              }} disabled={!hasExported} />
+              <HeaderAction icon={<Save />} label="Library" onClick={handleSaveToGallery} disabled={!hasExported} />
             </div>
           </div>
         )}
 
         {/* Scaled Poster Container */}
-        <div 
-          className="relative transition-all duration-500 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]"
-          style={{ transform: `scale(${finalScale})`, transformOrigin: 'top center' }}
-        >
-            <div 
-              ref={posterRef}
-              id="poster-output"
-              className="relative overflow-hidden flex flex-col"
-              style={{ 
-                width: currentSize.width, 
-                height: currentSize.height,
-                backgroundColor: poster.backgroundColor,
-                color: poster.textColor
-              }}
-            >
-              {/* Background Split */}
-              <div className="absolute inset-0 pointer-events-none z-0">
-                {/* Top Image Section */}
-                <div 
-                  className="absolute top-0 left-0 right-0 overflow-hidden"
-                  style={{ height: `${100 - (poster.solidBackgroundHeight ?? 50)}%` }}
-                >
-                  {poster.image ? (
-                    <img 
-                      src={poster.image} 
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 pointer-events-none" 
-                      style={{ 
-                        opacity: 1 - (poster.overlayOpacity ?? 0.2),
-                        transform: `scale(${poster.imageScale * 1.25}) translate(${poster.imageOffset.x}px, ${poster.imageOffset.y}px)`,
-                      }}
-                      alt="" 
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-black/5 flex flex-col items-center justify-center border-b border-dashed border-black/10">
-                      <ImageIcon className="w-12 h-12 text-black/20 mb-4" />
-                      <span className="text-xs uppercase tracking-widest font-bold text-black/30">Background Placeholder</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Foreground Image */}
-                {poster.foregroundImage && (
-                  <img 
-                    src={poster.foregroundImage} 
-                    className="absolute inset-0 w-full h-full object-contain transition-transform duration-700 pointer-events-none z-10" 
-                    style={{ 
-                      transform: `scale(${poster.foregroundScale}) translate(${poster.foregroundOffset.x}px, ${poster.foregroundOffset.y}px)`,
-                    }}
-                    alt="" 
+        {!isPreviewMode ? (
+          <div 
+            className="relative transition-all duration-500 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]"
+            style={{ transform: `scale(${finalScale})`, transformOrigin: 'top center' }}
+          >
+                 <PosterDisplay 
+                    poster={poster}
+                    currentSize={currentSize}
+                    innerRef={posterRef}
+                    gutterSize={gutterSize}
+                    baseContentScale={baseContentScale}
+                    handleElementClick={handleElementClick}
+                    focusedElement={focusedElement}
+                    isPreviewMode={isPreviewMode}
                   />
-                )}
-              </div>
 
-              {/* Content Wrapper for Guard/Margin */}
-              <div 
-                id="poster-content-wrapper"
-                className="relative z-20 flex-1 flex flex-col pointer-events-none transition-transform duration-300"
-                style={{ 
-                  marginTop: `${gutterSize + (poster.marginTop || 0) * 28.346}px`,
-                  marginBottom: `${gutterSize + (poster.marginBottom || 0) * 28.346}px`,
-                  marginLeft: `${gutterSize + (poster.marginLeft || 0) * 28.346}px`,
-                  marginRight: `${gutterSize + (poster.marginRight || 0) * 28.346}px`,
-                  transform: `scale(${poster.contentScale * baseContentScale})`,
-                  transformOrigin: 'center',
-                  alignItems: 'stretch' // Ensure it stretches to edges internally
-                }}
-              >
-                {/* Main Content Area */}
-                <div id="poster-content-area" className="w-full flex-1 flex flex-col pointer-events-none relative mt-16">
-                  {/* Independent QR Code Positioning */}
-                  {poster.qrUrl && (
-                    <div 
-                      className={`absolute bg-white p-5 shadow-2xl border-2 pointer-events-auto cursor-pointer hover:ring-2 hover:ring-gold transition-all flex flex-col items-center justify-center ${poster.qrShape === 'square' ? 'rounded-none' : poster.qrShape === 'circle' ? 'rounded-[3rem]' : 'rounded-2xl'}`}
-                      style={{ 
-                        borderColor: poster.accentColor,
-                        top: poster.qrPosition === 'center' ? 'auto' : (poster.qrPosition.startsWith('top') ? '0' : 'auto'),
-                        bottom: poster.qrPosition === 'center' ? '0' : (poster.qrPosition.startsWith('bottom') ? '0' : 'auto'),
-                        left: poster.qrPosition === 'center' ? '50%' : (poster.qrPosition.endsWith('left') ? '0' : 'auto'),
-                        right: poster.qrPosition === 'center' ? 'auto' : (poster.qrPosition.endsWith('right') ? '0' : 'auto'),
-                        transform: poster.qrPosition === 'center' ? 'translateX(-50%)' : 'none'
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleElementClick('qr', 'content');
-                      }}
-                    >
-                      <p className="text-[9px] text-center mb-3 font-bold text-black uppercase tracking-widest leading-tight">Inquire<br/>Within</p>
-                      <QRCodeSVG 
-                        value={poster.qrUrl} 
-                        size={110} 
-                        fgColor={poster.qrColor}
-                        level="H"
-                        imageSettings={poster.qrLogo ? {
-                          src: poster.theme === 'social_club' ? '/logo-social.png' : '/logo-tavern.png',
-                          x: undefined,
-                          y: undefined,
-                          height: 28,
-                          width: 28,
-                          excavate: true,
-                        } : undefined}
-                      />
-                    </div>
-                  )}
-
-                  <div 
-                    className="flex-1 flex flex-col justify-center pointer-events-auto cursor-pointer group w-full"
-                    style={{ transform: `translateY(${poster.contentVerticalPosition !== undefined ? poster.contentVerticalPosition - 50 : 0}%)` }}
-                    onClick={() => handleElementClick('title', 'content')}
-                  >
-                    <h1 
-                      className={`text-8xl md:text-9xl font-serif font-bold uppercase leading-[0.85] tracking-tighter mb-8 transition-all ${focusedElement === 'title' ? 'scale-105 blur-[0.5px]' : 'group-hover:scale-[1.02]'}`}
-                      style={{ color: poster.titleColor || poster.textColor, textAlign: poster.titleAlign || 'center' }}
-                    >
-                      {poster.title || "COASTERS"}
-                    </h1>
-                    
-                    <div className={`h-1.5 w-32 mb-10 ${poster.titleAlign === 'left' ? 'mr-auto' : poster.titleAlign === 'right' ? 'ml-auto' : 'mx-auto'}`} style={{ backgroundColor: poster.subtitleColor || poster.accentColor }} />
-                    
-                    <h2 
-                      className="text-3xl md:text-4xl font-bold uppercase tracking-[0.4em] mb-12 hover:text-gold transition-colors"
-                      style={{ color: poster.subtitleColor || poster.accentColor, textAlign: poster.subtitleAlign || 'center' }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleElementClick('subtitle', 'content');
-                      }}
-                    >
-                      {poster.subtitle || "EST. 1876"}
-                    </h2>
-
-                    {(poster.eventDate || poster.eventTime) && (
-                      <div 
-                        className="mb-10 flex flex-col gap-2 cursor-pointer hover:scale-105 transition-transform"
-                        style={{ alignItems: poster.subtitleAlign === 'left' ? 'flex-start' : poster.subtitleAlign === 'right' ? 'flex-end' : 'center' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleElementClick('date', 'content');
-                        }}
-                      >
-                        {poster.eventDate && (
-                          <div 
-                            className="text-2xl font-black uppercase tracking-[0.2em] px-4 py-2 border-y-2"
-                            style={{ borderColor: poster.subtitleColor || poster.accentColor, color: poster.titleColor || poster.textColor }}
-                          >
-                            {poster.eventDate}
-                          </div>
-                        )}
-                        {poster.eventTime && (
-                          <div 
-                            className="text-lg font-bold uppercase tracking-[0.3em]"
-                            style={{ color: poster.subtitleColor || poster.accentColor }}
-                          >
-                            {poster.eventTime}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    <div 
-                      className="text-xl md:text-2xl font-medium leading-relaxed w-full whitespace-pre-line opacity-90 hover:opacity-100 transition-opacity"
-                      style={{ color: poster.detailsColor || poster.textColor, textAlign: poster.detailsAlign || 'center' }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleElementClick('details', 'content');
-                      }}
-                    >
-                      {poster.details}
-                    </div>
-                  </div>
-
-                  {/* Footer Content */}
-                  <div className="w-full flex-shrink-0 flex flex-col justify-end pb-8">
-                    {/* Footer Logo */}
-                    {poster.showLogo && (
-                      <div 
-                        className="pt-8 flex flex-col cursor-pointer pointer-events-auto hover:ring-2 hover:ring-gold/30 rounded-full p-4 transition-all"
-                        style={{ alignItems: poster.footerAlign === 'left' ? 'flex-start' : poster.footerAlign === 'right' ? 'flex-end' : 'center' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleElementClick('logo', 'branding');
-                        }}
-                      >
-                        <div className="w-24 h-24 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
-                          <CoastersLogo 
-                             theme={poster.theme} 
-                             className="w-full h-full" 
-                             color={poster.logoColor || poster.backgroundColor}
-                             accentColor={poster.logoAccent || poster.accentColor}
-                          />
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Footer Text */}
-                    {poster.footer && (
-                      <div 
-                        className="mt-6 text-sm md:text-base font-bold tracking-widest uppercase cursor-pointer pointer-events-auto hover:opacity-80 transition-opacity whitespace-pre-line"
-                        style={{ color: poster.footerColor || poster.accentColor, textAlign: poster.footerAlign || 'center' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleElementClick('footer', 'content');
-                        }}
-                      >
-                        {poster.footer}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Debug Margin Lines (Only visible when using gutters and editing) */}
-              {(poster.size === 'A4' || poster.size === 'A3 Poster') && !isPreviewMode && (
-                <div 
-                  className="absolute inset-0 pointer-events-none opacity-50 flex items-center justify-center"
-                  style={{ borderWidth: `${gutterSize}px`, borderColor: 'rgba(255, 255, 255, 0.05)' }}
-                >
-                  <div 
-                    className="absolute top-0 left-0 text-[10px] bg-gold text-black px-2 mt-1 ml-1"
-                  >
-                    {poster.size === 'A4' ? '4cm' : '2cm'} Gutter Boundary
-                  </div>
-                </div>
-              )}
               
-              {/* Style Guide Trim */}
-              <div className="absolute top-0 left-0 w-full h-3 bg-white/10" />
-              <div className="absolute bottom-0 left-0 w-full h-3 bg-black/20" />
+              {/* Reference Overlay Image (outside poster-output so it doesn't get saved/printed) */}
+              {poster.referenceImage && !isPreviewMode && (
+                <img 
+                  src={poster.referenceImage}
+                  className="absolute inset-0 w-full h-full object-cover pointer-events-none mix-blend-difference z-[100]"
+                  style={{ opacity: poster.referenceOpacity || 0.5, mixBlendMode: 'normal' }}
+                  alt="Reference Layout Sample"
+                />
+              )}
             </div>
-            
-            {/* Reference Overlay Image (outside poster-output so it doesn't get saved/printed) */}
-            {poster.referenceImage && !isPreviewMode && (
-              <img 
-                src={poster.referenceImage}
-                className="absolute inset-0 w-full h-full object-cover pointer-events-none mix-blend-difference z-[100]"
-                style={{ opacity: poster.referenceOpacity || 0.5, mixBlendMode: 'normal' }}
-                alt="Reference Layout Sample"
-              />
-            )}
-          </div>
+        ) : (
+           <div className="w-full flex-1 overflow-y-auto pb-32 pt-16 px-4 md:px-12 flex flex-col items-center">
+             <div className="text-center mb-16">
+               <h2 className="text-3xl font-serif text-white mb-2 uppercase tracking-widest">{poster.title || 'Untitled Campaign'}</h2>
+               <p className="text-gold uppercase tracking-[0.2em] text-xs">All Formats Generated</p>
+             </div>
+             
+             <div className="flex flex-wrap justify-center items-end gap-x-12 gap-y-20 max-w-[1600px]">
+               {POSTER_SIZES.map(s => {
+                  const previewBoxWidth = 360;
+                  const displayScale = previewBoxWidth / s.width;
+                  
+                  const isCm = s.name === 'A4' || s.name === 'A3 Poster';
+                  const sGutterSize = isCm ? (s.name === 'A4' ? 113.384 : 56.692) : 0;
+                  const sBaseScale = Math.min(
+                     (s.width - sGutterSize * 2) / 600,
+                     (s.height - sGutterSize * 2) / 900
+                  );
+                  
+                  return (
+                     <div key={s.name} className="flex flex-col items-center gap-6">
+                        <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 bg-zinc-900/80 px-4 py-2 rounded-full border border-white/5">{s.label} ({s.width}x{s.height})</span>
+                        <div 
+                          className="relative shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] origin-top transition-all"
+                          style={{ transform: `scale(${displayScale})`, width: s.width, height: s.height, marginBottom: -s.height * (1 - displayScale) }}
+                        >
+                          <PosterDisplay 
+                             poster={{...poster, size: s.name}} 
+                             currentSize={s}
+                             gutterSize={sGutterSize}
+                             baseContentScale={sBaseScale}
+                             handleElementClick={() => {}}
+                             focusedElement={null}
+                             isPreviewMode={true}
+                             innerRef={null}
+                          />
+                          <div 
+                            className="absolute inset-0 bg-transparent hover:bg-gold/10 transition-colors pointer-events-auto border border-white/5 hover:border-gold/50 cursor-pointer z-50" 
+                            onClick={(e) => {
+                               e.stopPropagation();
+                               setPoster(p => ({...p, size: s.name}));
+                               setIsPreviewMode(false);
+                            }} 
+                           />
+                        </div>
+                     </div>
+                  )
+               })}
+             </div>
+           </div>
+        )}
 
         {/* Overlay toggle for mobile/fullscreen */}
         {isPreviewMode && (
@@ -1232,24 +1404,27 @@ function NavButton({ icon, label, active, onClick }: { icon: React.ReactNode, la
   return (
     <button 
       onClick={onClick}
-      className={`group relative p-4 rounded-2xl transition-all duration-300 ${active ? 'bg-gold/10 text-gold scale-110 border border-gold/20' : 'text-zinc-600 hover:text-zinc-300'}`}
+      className={`group relative flex flex-col items-center gap-1.5 p-3 w-full transition-all duration-300 ${active ? 'text-gold fill-gold scale-105' : 'text-zinc-500 hover:text-zinc-300'}`}
     >
-      {React.cloneElement(icon as React.ReactElement, { className: 'w-6 h-6' })}
-      <span className={`absolute left-full ml-4 px-3 py-1 bg-zinc-900 border border-zinc-800 text-white text-[10px] font-bold uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-2xl`}>
-        {label}
-      </span>
+      <div className={`p-2 rounded-2xl transition-all duration-300 ${active ? 'bg-gold/10 border border-gold/20 shadow-[0_0_20px_rgba(203,168,68,0.1)]' : 'bg-transparent border border-transparent group-hover:bg-zinc-800/50'}`}>
+        {React.cloneElement(icon as React.ReactElement, { className: 'w-6 h-6' })}
+      </div>
+      <span className="text-[9px] font-bold uppercase tracking-wider">{label}</span>
     </button>
   );
 }
 
-function HeaderAction({ icon, label, onClick, highlighted = false }: { icon: React.ReactNode, label: string, onClick: () => void, highlighted?: boolean }) {
+function HeaderAction({ icon, label, onClick, highlighted = false, disabled = false }: { icon: React.ReactNode, label: string, onClick: () => void, highlighted?: boolean, disabled?: boolean }) {
   return (
     <button 
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2 text-[11px] font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95 ${
-        highlighted 
-          ? 'bg-gold text-black hover:bg-gold/90 shadow-[0_8px_20px_rgba(203,168,68,0.2)]' 
-          : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800'
+      disabled={disabled}
+      className={`flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${
+        disabled 
+          ? 'bg-zinc-900/30 text-zinc-600 cursor-not-allowed opacity-40 border border-transparent' 
+          : highlighted 
+            ? 'bg-gradient-to-br from-gold to-yellow-600 text-black hover:scale-105 shadow-[0_5px_15px_rgba(203,168,68,0.3)] active:scale-95 border border-gold/50' 
+            : 'bg-zinc-800/80 text-zinc-300 hover:text-white hover:bg-zinc-700 hover:shadow-lg active:scale-95 border border-white/5'
       }`}
     >
       {React.cloneElement(icon as React.ReactElement, { className: 'w-3.5 h-3.5' })}
