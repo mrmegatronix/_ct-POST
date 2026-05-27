@@ -17,7 +17,7 @@ export const CoastersLogo: React.FC<LogoProps> = ({ theme, className = "w-24 h-2
   if (theme === 'social_club') {
     return (
       <img 
-        src="/logo-social.png" 
+        src="logo-social.png" 
         alt="Coasters Tavern Social Club Logo" 
         className={`object-contain ${className}`}
       />
@@ -26,12 +26,12 @@ export const CoastersLogo: React.FC<LogoProps> = ({ theme, className = "w-24 h-2
     return (
       <div className={`flex gap-4 items-center justify-center ${className}`}>
         <img 
-          src="/logo-tavern.png" 
+          src="logo-tavern.png" 
           alt="Coasters Tavern Logo" 
           className="w-full h-full object-contain"
         />
         <img 
-          src="/logo-social.png" 
+          src="logo-social.png" 
           alt="Coasters Tavern Social Club Logo" 
           className="w-full h-full object-contain"
         />
@@ -42,7 +42,7 @@ export const CoastersLogo: React.FC<LogoProps> = ({ theme, className = "w-24 h-2
   // Default to tavern
   return (
     <img 
-      src="/logo-tavern.png" 
+      src="logo-tavern.png" 
       alt="Coasters Tavern Logo" 
       className={`object-contain ${className}`}
     />

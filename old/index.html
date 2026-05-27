@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIM Media Maker | Coasters Tavern</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #030712;
+            --card: #111827;
+            --accent: #8b5cf6;
+            --accent-glow: rgba(139, 92, 246, 0.4);
+            --text: #f3f4f6;
+            --border: rgba(255,255,255,0.08);
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+        }
+        .header h1 {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--accent);
+            letter-spacing: -1px;
+        }
+        .header .badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.3);
+        }
+
+        /* Main Layout */
+        .main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .coming-soon {
+            text-align: center;
+            max-width: 600px;
+        }
+        .coming-soon .icon {
+            font-size: 5rem;
+            margin-bottom: 2rem;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .coming-soon h2 {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent), #c084fc);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .coming-soon p {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.5);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            text-align: left;
+        }
+        .feature-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            padding: 1rem 1.2rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.6);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .feature-item .emoji { font-size: 1.2rem; }
+
+        /* Nav Hub */
+        .nav-hub {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+            border-top: 1px solid var(--border); padding: 12px 20px;
+            display: flex; justify-content: center; align-items: center; gap: 20px;
+            z-index: 5000;
+        }
+        .nav-link {
+            color: #888; text-decoration: none; font-size: 0.8rem;
+            font-weight: 700; text-transform: uppercase;
+            transition: color 0.2s;
+        }
+        .nav-link:hover { color: var(--accent); }
+        .nav-link.active { color: var(--accent); }
+        .nav-sep { color: #333; font-size: 0.6rem; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🎨 NIM Media Maker</h1>
+        <span class="badge">Coasters Tavern • Media System</span>
+    </div>
+
+    <div class="main">
+        <div class="coming-soon">
+            <div class="icon">🎨</div>
+            <h2>Media Maker</h2>
+            <p>Create professional posters, banners, and social media content for Coasters Tavern &amp; Social Club. Coming soon.</p>
+
+            <div class="feature-list">
+                <div class="feature-item"><span class="emoji">📄</span> A4 / A3 Posters</div>
+                <div class="feature-item"><span class="emoji">📱</span> Social Media Posts</div>
+                <div class="feature-item"><span class="emoji">🖼️</span> Banners & Headers</div>
+                <div class="feature-item"><span class="emoji">📧</span> Email Templates</div>
+                <div class="feature-item"><span class="emoji">🎨</span> Brand Style Guide</div>
+                <div class="feature-item"><span class="emoji">📊</span> Event Data Import</div>
+            </div>
+        </div>
+    </div>
+
+
+</body>
+</html>

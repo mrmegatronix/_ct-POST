@@ -21,16 +21,19 @@ export const COLORS = {
 };
 
 export const COLOR_PALETTES = [
+  { name: "Official Black & Gold", bg: COLORS.black, text: COLORS.white, accent: COLORS.gold },
+  { name: "Emerald Luxury", bg: "#0D2E27", text: "#F4F0EA", accent: COLORS.gold },
+  { name: "Sapphire & Steel", bg: COLORS.sapphire, text: COLORS.white, accent: COLORS.steel },
+  { name: "Crimson Velvet", bg: COLORS.crimson, text: COLORS.cream, accent: "#E0A96D" },
+  { name: "Midnight Social", bg: COLORS.midnight, text: COLORS.cream, accent: COLORS.gold },
+  { name: "Sunday Roast (Classic)", bg: "#1A1512", text: COLORS.cream, accent: "#E0A96D" },
+  { name: "Chase the Ace", bg: "#0D2B45", text: "#D0E1F9", accent: "#FFD700" },
+  { name: "Forest Pine & Sage", bg: COLORS.pine, text: COLORS.white, accent: COLORS.sage },
+  { name: "Tangerine Sunset", bg: "#1A1C1E", text: COLORS.cream, accent: COLORS.tangerine },
+  { name: "Plum & Lavender", bg: "#2E1A47", text: COLORS.cream, accent: "#D6C7FF" },
+  { name: "Ocean Teal & Sand", bg: "#073B4C", text: COLORS.white, accent: "#FFD166" },
   { name: "Printer Friendly (White)", bg: "#FFFFFF", text: "#000000", accent: COLORS.gold },
   { name: "Printer Friendly (Light Gray)", bg: "#F4F4F5", text: "#18181B", accent: COLORS.gold },
-  { name: "Official Black & Gold", bg: COLORS.black, text: COLORS.white, accent: COLORS.gold },
-  { name: "Midnight Social", bg: COLORS.midnight, text: COLORS.cream, accent: COLORS.gold },
-  { name: "Sunday Roast", bg: "#1A1512", text: COLORS.cream, accent: COLORS.gold }, // Based on your sample
-  { name: "Chase the Ace", bg: "#0D2B45", text: "#D0E1F9", accent: "#FFD700" }, // Based on your sample
-  { name: "Halloween Haunt", bg: "#0F0F0F", text: "#FF7518", accent: "#BC13FE" },
-  { name: "Merry Christmas", bg: "#0B3D1D", text: "#FFFFFF", accent: "#C41E3A" },
-  { name: "Racing Carnival", bg: "#2E5A27", text: COLORS.white, accent: COLORS.gold },
-  { name: "New Years Eve", bg: COLORS.midnight, text: COLORS.white, accent: "#E5E4E2" },
 ];
 
 export const FONTS = {
@@ -49,6 +52,7 @@ export const POSTER_SIZES: PosterSize[] = [
   { name: "A4", width: 595, height: 842, label: "A4 (4cm Gutter)" },
   { name: "A3 Poster", width: 600, height: 900, label: "A3 Poster (2cm Gutter)" },
   { name: "Social", width: 800, height: 800, label: "Social Media (1:1)" },
+  { name: "1080p TV", width: 1920, height: 1080, label: "1080p TV Screen (16:9 Landscape)" },
 ];
 
 export type PosterTheme = "tavern" | "social_club" | "both";

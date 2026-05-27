@@ -130,7 +130,7 @@ export function PosterDisplay({ poster, currentSize, innerRef, gutterSize, baseC
                         fgColor={poster.qrColor}
                         level="H"
                         imageSettings={poster.qrLogo ? {
-                          src: poster.theme === 'social_club' ? '/logo-social.png' : '/logo-tavern.png',
+                          src: poster.theme === 'social_club' ? 'logo-social.png' : 'logo-tavern.png',
                           x: undefined,
                           y: undefined,
                           height: 28,
@@ -303,6 +303,60 @@ export default function App() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Automatically trigger auto-fit when layout or content changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const wrapper = document.getElementById('poster-content-wrapper');
+      if (!wrapper) return;
+      
+      const currentSize = POSTER_SIZES.find(s => s.name === poster.size) || POSTER_SIZES[1];
+      const gutterSize = poster.size === 'A4' ? 113.384 : poster.size === 'A3 Poster' ? 56.692 : 0;
+      
+      const baseContentScale = Math.min(
+        (currentSize.width - gutterSize * 2) / 600,
+        (currentSize.height - gutterSize * 2) / 900
+      );
+      
+      const availableH = currentSize.height - (gutterSize * 2) - ((poster.marginTop || 0) + (poster.marginBottom || 0)) * 28.346;
+      const availableW = currentSize.width - (gutterSize * 2) - ((poster.marginLeft || 0) + (poster.marginRight || 0)) * 28.346;
+      
+      const oldTransform = wrapper.style.transform;
+      wrapper.style.transform = 'none';
+      void wrapper.offsetHeight;
+      
+      const wrapperScrollH = wrapper.scrollHeight;
+      const wrapperScrollW = wrapper.scrollWidth;
+      
+      wrapper.style.transform = oldTransform;
+      
+      if (wrapperScrollH > 0 && availableH > 0) {
+        const neededScaleH = availableH / wrapperScrollH;
+        const neededScaleW = availableW / wrapperScrollW;
+        let neededScale = Math.min(neededScaleH, neededScaleW);
+        neededScale = neededScale / baseContentScale;
+        neededScale = Math.min(neededScale * 0.95, 2.5); // Cap at 2.5
+        
+        if (Math.abs(poster.contentScale - neededScale) > 0.02) {
+          setPoster(p => ({...p, contentScale: neededScale}));
+        }
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [
+    poster.size,
+    poster.title,
+    poster.subtitle,
+    poster.details,
+    poster.footer,
+    poster.showLogo,
+    poster.marginTop,
+    poster.marginBottom,
+    poster.marginLeft,
+    poster.marginRight
+  ]);
+
   const posterRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const foregroundFileInputRef = useRef<HTMLInputElement>(null);
